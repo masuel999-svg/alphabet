@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رحلة الحرف العربي 🎮</title>
+    
+    <!-- مكتبة Tailwind للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- مكتبات React الأساسية لتشغيل اللعبة -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- المترجم Babel (هذا ما كان ينقصك في الصورة ليقوم بتشغيل اللعبة) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- خط جميل ومناسب للأطفال -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background-color: #f0f9ff;
+            user-select: none;
+        }
+        /* حركات جميلة للأزرار */
+        .btn-hover { transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .btn-active:active { transform: translateY(0) scale(0.95); }
+        
+        /* حركة الدخول */
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-sky-50 to-blue-100 pb-20">
+    
+    <!-- هنا ستظهر اللعبة -->
+    <div id="root"></div>
+
+    <!-- كود اللعبة بالكامل -->
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // 1. قاعدة بيانات الحروف الشاملة
+        const lettersData = [
+            { id: 'ا', name: 'ألف', type: 'قطع', forms: { isolated: 'ا', start: 'ا', middle: 'ـا', end: 'ـا' }, family: 'منفرد' },
+            { id: 'ب', name: 'باء', type: 'وصل', forms: { isolated: 'ب', start: 'بـ', middle: 'ـبـ', end: 'ـب' }, family: 'الطبق', dots: 'نقطة تحت' },
+            { id: 'ت', name: 'تاء', type: 'وصل', forms: { isolated: 'ت', start: 'تـ', middle: 'ـتـ', end: 'ـت' }, family: 'الطبق', dots: 'نقطتان فوق' },
+            { id: 'ث', name: 'ثاء', type: 'وصل', forms: { isolated: 'ث', start: 'ثـ', middle: 'ـثـ', end: 'ـث' }, family: 'الطبق', dots: '٣ نقاط فوق' },
+            { id: 'ج', name: 'جيم', type: 'وصل', forms: { isolated: 'ج', start: 'جـ', middle: 'ـجـ', end: 'ـج' }, family: 'ج ح خ', dots: 'نقطة تحت' },
+            { id: 'ح', name: 'حاء', type: 'وصل', forms: { isolated: 'ح', start: 'حـ', middle: 'ـحـ', end: 'ـح' }, family: 'ج ح خ', dots: 'بدون نقاط' },
+            { id: 'خ', name: 'خاء', type: 'وصل', forms: { isolated: 'خ', start: 'خـ', middle: 'ـخـ', end: 'ـخ' }, family: 'ج ح خ', dots: 'نقطة فوق' },
+            { id: 'د', name: 'دال', type: 'قطع', forms: { isolated: 'د', start: 'د', middle: 'ـد', end: 'ـد' }, family: 'د ذ', dots: 'بدون نقاط' },
+            { id: 'ذ', name: 'ذال', type: 'قطع', forms: { isolated: 'ذ', start: 'ذ', middle: 'ـذ', end: 'ـذ' }, family: 'د ذ', dots: 'نقطة فوق' },
+            { id: 'ر', name: 'راء', type: 'قطع', forms: { isolated: 'ر', start: 'ر', middle: 'ـر', end: 'ـر' }, family: 'ر ز', dots: 'بدون نقاط' },
+            { id: 'ز', name: 'زاي', type: 'قطع', forms: { isolated: 'ز', start: 'ز', middle: 'ـز', end: 'ـز' }, family: 'ر ز', dots: 'نقطة فوق' },
+            { id: 'س', name: 'سين', type: 'وصل', forms: { isolated: 'س', start: 'سـ', middle: 'ـسـ', end: 'ـس' }, family: 'س ش', dots: 'بدون نقاط' },
+            { id: 'ش', name: 'شين', type: 'وصل', forms: { isolated: 'ش', start: 'شـ', middle: 'ـشـ', end: 'ـش' }, family: 'س ش', dots: '٣ نقاط فوق' },
+            { id: 'ص', name: 'صاد', type: 'وصل', forms: { isolated: 'ص', start: 'صـ', middle: 'ـصـ', end: 'ـص' }, family: 'ص ض', dots: 'بدون نقاط' },
+            { id: 'ض', name: 'ضاد', type: 'وصل', forms: { isolated: 'ض', start: 'ضـ', middle: 'ـضـ', end: 'ـض' }, family: 'ص ض', dots: 'نقطة فوق' },
+            { id: 'ط', name: 'طاء', type: 'وصل', forms: { isolated: 'ط', start: 'طـ', middle: 'ـطـ', end: 'ـط' }, family: 'ط ظ', dots: 'بدون نقاط' },
+            { id: 'ظ', name: 'ظاء', type: 'وصل', forms: { isolated: 'ظ', start: 'ظـ', middle: 'ـظـ', end: 'ـظ' }, family: 'ط ظ', dots: 'نقطة فوق' },
+            { id: 'ع', name: 'عين', type: 'وصل', forms: { isolated: 'ع', start: 'عـ', middle: 'ـعـ', end: 'ـع' }, family: 'ع غ', dots: 'بدون نقاط' },
+            { id: 'غ', name: 'غين', type: 'وصل', forms: { isolated: 'غ', start: 'غـ', middle: 'ـغـ', end: 'ـغ' }, family: 'ع غ', dots: 'نقطة فوق' },
+            { id: 'ف', name: 'فاء', type: 'وصل', forms: { isolated: 'ف', start: 'فـ', middle: 'ـفـ', end: 'ـف' }, family: 'ف ق', dots: 'نقطة فوق' },
+            { id: 'ق', name: 'قاف', type: 'وصل', forms: { isolated: 'ق', start: 'قـ', middle: 'ـقـ', end: 'ـق' }, family: 'ف ق', dots: 'نقطتان فوق' },
+            { id: 'ك', name: 'كاف', type: 'وصل', forms: { isolated: 'ك', start: 'كـ', middle: 'ـكـ', end: 'ـك' }, family: 'منفرد' },
+            { id: 'ل', name: 'لام', type: 'وصل', forms: { isolated: 'ل', start: 'لـ', middle: 'ـلـ', end: 'ـل' }, family: 'منفرد' },
+            { id: 'م', name: 'ميم', type: 'وصل', forms: { isolated: 'م', start: 'مـ', middle: 'ـمـ', end: 'ـم' }, family: 'منفرد' },
+            { id: 'ن', name: 'نون', type: 'وصل', forms: { isolated: 'ن', start: 'نـ', middle: 'ـنـ', end: 'ـن' }, family: 'الطبق', dots: 'نقطة فوق' },
+            { id: 'ه', name: 'هاء', type: 'وصل', forms: { isolated: 'ه', start: 'هـ', middle: 'ـهـ', end: 'ـه' }, family: 'منفرد' },
+            { id: 'و', name: 'واو', type: 'قطع', forms: { isolated: 'و', start: 'و', middle: 'ـو', end: 'ـو' }, family: 'منفرد' },
+            { id: 'ي', name: 'ياء', type: 'وصل', forms: { isolated: 'ي', start: 'يـ', middle: 'ـيـ', end: 'ـي' }, family: 'منفرد' },
+        ];
+
+        const familiesList = ['الطبق', 'ج ح خ', 'د ذ', 'ر ز', 'س ش', 'ص ض', 'ط ظ', 'ع غ', 'ف ق'];
+
+        // دالة خلط المصفوفات
+        const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
+
+        // دالة نطق الصوت
+        const speak = (text) => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 0.8; 
+                window.speechSynthesis.speak(utterance);
+            }
+        };
+
+        // ==========================================
+        // 🎮 اللعبة الرئيسية
+        // ==========================================
+        const App = () => {
+            const [stage, setStage] = useState(0); 
+            const [stars, setStars] = useState(0);
+            const [currentFamily, setCurrentFamily] = useState('الطبق');
+            const [feedback, setFeedback] = useState(null);
+
+            const showFeedback = (msg, isSuccess) => {
+                setFeedback({ msg, isSuccess });
+                if (isSuccess) setStars(s => s + 1);
+                setTimeout(() => setFeedback(null), 2000);
+            };
+
+            // ----------------------------------------
+            // شاشة اختيار العائلات والمراحل (القائمة)
+            // ----------------------------------------
+            const MenuScreen = () => (
+                <div className="flex flex-col items-center w-full max-w-4xl mx-auto animate-pop space-y-8">
+                    
+                    <div className="bg-white p-8 rounded-[2rem] shadow-xl text-center w-full border-4 border-blue-50">
+                        <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-sky-400 mb-4">
+                            رحلة الحرف العربي 🚀
+                        </h1>
+                        <p className="text-xl text-slate-500 font-bold bg-slate-100 inline-block px-6 py-2 rounded-full">
+                            نور البيان × عائلات الحروف × أشكال الحروف
+                        </p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl shadow-md w-full text-center border-2 border-slate-100">
+                        <h2 className="text-2xl font-bold text-slate-700 mb-4">أولاً: اختر العائلة للتدريب 👇</h2>
+                        <select 
+                            value={currentFamily} 
+                            onChange={(e) => setCurrentFamily(e.target.value)}
+                            className="bg-blue-50 border-4 border-blue-200 text-blue-800 text-2xl font-black rounded-2xl p-4 w-full md:w-1/2 outline-none cursor-pointer text-center"
+                        >
+                            {familiesList.map(f => <option key={f} value={f}>عائلة ( {f} )</option>)}
+                        </select>
+                    </div>
+
+                    <h2 className="text-2xl font-bold text-slate-700 w-full text-center mt-4">ثانياً: اختر اللعبة 🎮</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                        <button onClick={() => setStage(1)} className="bg-gradient-to-br from-emerald-400 to-emerald-500 text-white p-8 rounded-3xl shadow-lg btn-hover btn-active border-b-8 border-emerald-600 flex flex-col items-center gap-2">
+                            <span className="text-5xl">👀</span>
+                            <span className="text-xl font-black mt-2">أين الحرف؟</span>
+                        </button>
+                        
+                        <button onClick={() => setStage(2)} className="bg-gradient-to-br from-rose-400 to-rose-500 text-white p-8 rounded-3xl shadow-lg btn-hover btn-active border-b-8 border-rose-600 flex flex-col items-center gap-2">
+                            <span className="text-5xl">🔴</span>
+                            <span className="text-xl font-black mt-2">مكان النقطة</span>
+                        </button>
+
+                        <button onClick={() => setStage(3)} className="bg-gradient-to-br from-purple-400 to-purple-500 text-white p-8 rounded-3xl shadow-lg btn-hover btn-active border-b-8 border-purple-600 flex flex-col items-center gap-2">
+                            <span className="text-5xl">👂</span>
+                            <span className="text-xl font-black mt-2">اسمع واختار</span>
+                        </button>
+
+                        <button onClick={() => setStage(4)} className="bg-gradient-to-br from-amber-400 to-amber-500 text-white p-8 rounded-3xl shadow-lg btn-hover btn-active border-b-8 border-amber-600 flex flex-col items-center gap-2">
+                            <span className="text-5xl">📍</span>
+                            <span className="text-xl font-black mt-2">أشكال الحرف</span>
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // ----------------------------------------
+            // مرحلة 1: أين الحرف
+            // ----------------------------------------
+            const FindLetterGame = () => {
+                const [target, setTarget] = useState(null);
+                const [options, setOptions] = useState([]);
+
+                const generate = () => {
+                    const familyMembers = lettersData.filter(l => l.family === currentFamily);
+                    const newTarget = familyMembers[Math.floor(Math.random() * familyMembers.length)];
+                    setTarget(newTarget);
+                    setOptions(shuffle(familyMembers));
+                    setTimeout(() => speak(`${newTarget.sound || newTarget.id + 'َ'}`), 500);
+                };
+
+                useEffect(() => { generate(); }, []);
+
+                if (!target) return null;
+                return (
+                    <div className="text-center animate-pop w-full max-w-2xl mx-auto">
+                        <h2 className="text-3xl font-bold text-emerald-700 bg-emerald-100 py-3 px-8 rounded-full mb-8 inline-block shadow-sm">المرحلة 1: أين الحرف؟</h2>
+                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border-b-8 border-emerald-200">
+                            <button onClick={() => speak(target.id + 'َ')} className="text-6xl bg-emerald-500 hover:bg-emerald-600 text-white w-24 h-24 rounded-full shadow-lg mb-8 btn-hover btn-active">🔊</button>
+                            <h3 className="text-3xl text-slate-700 font-bold mb-10">أين حرف <span className="text-emerald-600 text-5xl font-black mx-2">"{target.id}َ"</span> ؟</h3>
+                            
+                            <div className="flex justify-center gap-6 flex-wrap flex-row-reverse">
+                                {options.map(opt => (
+                                    <button key={opt.id} onClick={() => {
+                                        if (opt.id === target.id) {
+                                            showFeedback("ممتاز! بطل 🌟", true);
+                                            setTimeout(generate, 1500);
+                                        } else {
+                                            showFeedback("قريب جداً! اسمع مرة تانية.", false);
+                                            speak(target.id + 'َ');
+                                        }
+                                    }} className="text-7xl w-32 h-32 bg-slate-50 border-4 border-slate-200 rounded-3xl hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 transition-all font-black text-slate-800 shadow-sm btn-active flex items-center justify-center">
+                                        {opt.id}َ
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // ----------------------------------------
+            // مرحلة 2: النقطة فين
+            // ----------------------------------------
+            const DotsGame = () => {
+                const [target, setTarget] = useState(null);
+                const [options, setOptions] = useState([]);
+
+                const generate = () => {
+                    const familyMembers = lettersData.filter(l => l.family === currentFamily && l.dots);
+                    if(familyMembers.length === 0) { setStage(0); return; } // خروج اذا كانت العائلة بلا نقاط
+                    const newTarget = familyMembers[Math.floor(Math.random() * familyMembers.length)];
+                    setTarget(newTarget);
+                    setOptions(shuffle(familyMembers));
+                };
+
+                useEffect(() => { generate(); }, []);
+
+                if (!target) return null;
+                return (
+                    <div className="text-center animate-pop w-full max-w-2xl mx-auto">
+                        <h2 className="text-3xl font-bold text-rose-700 bg-rose-100 py-3 px-8 rounded-full mb-8 inline-block shadow-sm">المرحلة 2: النقطة فين؟</h2>
+                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border-b-8 border-rose-200">
+                            <h3 className="text-3xl text-slate-700 font-bold mb-10 leading-relaxed">
+                                من هو الحرف الذي له <br/>
+                                <span className="text-rose-600 text-4xl bg-rose-50 px-6 py-2 rounded-2xl mt-4 inline-block font-black shadow-inner border border-rose-100">{target.dots}</span> ؟
+                            </h3>
+                            
+                            <div className="flex justify-center gap-6 flex-wrap flex-row-reverse">
+                                {options.map(opt => (
+                                    <button key={opt.id} onClick={() => {
+                                        if (opt.id === target.id) {
+                                            showFeedback("شاطر! عينك قوية 👁️🌟", true);
+                                            setTimeout(generate, 1500);
+                                        } else {
+                                            showFeedback(`لا، هذا له ${opt.dots || 'نقاط مختلفة'}`, false);
+                                        }
+                                    }} className="text-7xl w-32 h-32 bg-slate-50 border-4 border-slate-200 rounded-3xl hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700 transition-all font-black text-slate-800 shadow-sm btn-active flex items-center justify-center">
+                                        {opt.id}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // ----------------------------------------
+            // مرحلة 3: اسمع واختار
+            // ----------------------------------------
+            const ListenGame = () => {
+                const [target, setTarget] = useState(null);
+                const [options, setOptions] = useState([]);
+                const [hasPlayed, setHasPlayed] = useState(false);
+
+                const generate = () => {
+                    const familyMembers = lettersData.filter(l => l.family === currentFamily);
+                    setTarget(familyMembers[Math.floor(Math.random() * familyMembers.length)]);
+                    setOptions(shuffle(familyMembers));
+                    setHasPlayed(false);
+                };
+
+                useEffect(() => { generate(); }, []);
+
+                if (!target) return null;
+                return (
+                    <div className="text-center animate-pop w-full max-w-2xl mx-auto">
+                        <h2 className="text-3xl font-bold text-purple-700 bg-purple-100 py-3 px-8 rounded-full mb-8 inline-block shadow-sm">المرحلة 3: اسمع واختار 👂</h2>
+                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border-b-8 border-purple-200">
+                            
+                            <button onClick={() => { speak(target.id + 'َ'); setHasPlayed(true); }} className="text-7xl bg-purple-500 hover:bg-purple-600 text-white w-32 h-32 rounded-full shadow-lg mb-8 btn-hover btn-active">🔊</button>
+                            <p className="text-xl text-slate-500 font-bold mb-8">اضغط لتسمع الحرف</p>
+
+                            {hasPlayed && (
+                                <div className="flex justify-center gap-6 flex-wrap flex-row-reverse animate-pop">
+                                    {options.map(opt => (
+                                        <button key={opt.id} onClick={() => {
+                                            if (opt.id === target.id) {
+                                                showFeedback("رائع! سمعته صح! 👏", true);
+                                                setTimeout(generate, 1500);
+                                            } else {
+                                                showFeedback("ركز في الصوت، اسمع مرة تانية.", false);
+                                                speak(target.id + 'َ');
+                                            }
+                                        }} className="text-7xl w-32 h-32 bg-slate-50 border-4 border-slate-200 rounded-3xl hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 transition-all font-black text-slate-800 shadow-sm btn-active flex items-center justify-center">
+                                            {opt.id}َ
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            // ----------------------------------------
+            // مرحلة 4: أشكال الحرف
+            // ----------------------------------------
+            const ShapesGame = () => {
+                const [target, setTarget] = useState(null);
+                const [questionType, setQuestionType] = useState('start');
+                const [options, setOptions] = useState([]);
+
+                const qTexts = { isolated: 'واقف لوحده', start: 'في أول الكلمة', middle: 'في وسط الكلمة', end: 'في آخر الكلمة' };
+
+                const generate = () => {
+                    const connecting = lettersData.filter(l => l.type === 'وصل');
+                    const newTarget = connecting[Math.floor(Math.random() * connecting.length)];
+                    setTarget(newTarget);
+                    
+                    const types = ['isolated', 'start', 'middle', 'end'];
+                    setQuestionType(types[Math.floor(Math.random() * types.length)]);
+                    setOptions(shuffle(Object.values(newTarget.forms)));
+                };
+
+                useEffect(() => { generate(); }, []);
+
+                if (!target) return null;
+                return (
+                    <div className="text-center animate-pop w-full max-w-3xl mx-auto">
+                        <h2 className="text-3xl font-bold text-amber-700 bg-amber-100 py-3 px-8 rounded-full mb-8 inline-block shadow-sm">المرحلة 4: أشكال الحرف 📍</h2>
+                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border-b-8 border-amber-200">
+                            
+                            <h3 className="text-3xl text-slate-700 font-bold mb-4">أين حرف <span className="text-amber-600 text-5xl font-black mx-2">{target.name}</span></h3>
+                            <div className="bg-amber-50 border-2 border-amber-200 py-4 px-8 rounded-2xl inline-block mb-10 shadow-inner">
+                                <p className="text-3xl font-black text-amber-800">{qTexts[questionType]}؟</p>
+                            </div>
+
+                            <div className="flex justify-center gap-6 flex-wrap flex-row-reverse">
+                                {options.map((opt, i) => (
+                                    <button key={i} onClick={() => {
+                                        if (opt === target.forms[questionType]) {
+                                            showFeedback("صح! الحرف بيغير شكله بس بيفضل نفس الحرف 🌟", true);
+                                            setTimeout(generate, 1500);
+                                        } else {
+                                            showFeedback("ركز في شكل الإيد، الحرف ماسك في مين؟ 👀", false);
+                                        }
+                                    }} className="text-7xl px-8 h-32 bg-slate-50 border-4 border-slate-200 rounded-3xl hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-all font-black text-slate-800 shadow-sm btn-active flex items-center justify-center">
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // ----------------------------------------
+            // الواجهة العلوية (الهيدر)
+            // ----------------------------------------
+            return (
+                <div className="font-sans text-slate-800">
+                    <header className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 p-4 border-b border-slate-200">
+                        <div className="max-w-5xl mx-auto flex justify-between items-center px-4">
+                            {stage !== 0 ? (
+                                <button onClick={() => setStage(0)} className="text-2xl font-black text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-2 bg-slate-100 px-6 py-2 rounded-full border border-slate-200 btn-hover">
+                                    🏠 عودة
+                                </button>
+                            ) : (
+                                <div className="text-2xl font-black text-blue-600">🎮 رحلة الحرف</div>
+                            )}
+                            
+                            <div className="bg-gradient-to-r from-amber-200 to-yellow-400 border-2 border-yellow-500 px-6 py-2 rounded-full text-2xl font-black text-amber-900 shadow-sm animate-pop flex gap-2">
+                                ⭐ <span>{stars}</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* رسائل التقييم (ممتاز / حاول مرة أخرى) */}
+                    {feedback && (
+                        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                            <div className={`px-10 py-6 rounded-3xl shadow-2xl text-4xl font-black text-white text-center border-4 border-white/50 animate-pop
+                                ${feedback.isSuccess ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                                {feedback.msg}
+                            </div>
+                        </div>
+                    )}
+
+                    <main className="p-4 md:p-8 mt-4 flex justify-center items-center">
+                        {stage === 0 && <MenuScreen />}
+                        {stage === 1 && <FindLetterGame />}
+                        {stage === 2 && <DotsGame />}
+                        {stage === 3 && <ListenGame />}
+                        {stage === 4 && <ShapesGame />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
